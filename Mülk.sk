@@ -1,0 +1,233 @@
+options:
+	p: &2[&6Mülk&2]
+	araziler: "arazi1" #Satılığa açılacak olan region isimleri girilmelidir. 2 arazi için "arazi1" and "arazi2", daha fazla arazi için "arazi1", "arazi2" and "arazi3"
+every 1 minutes:
+	loop players:
+		if {mülk::%loop-player%::dakika} is set:
+			add 1 to {mülk::%loop-player%::dakika}
+			if {mülk::%loop-player%::dakika} is 60:
+				set {mülk::%loop-player%::dakika} to 0
+				add {mülk::%loop-player%::kirafiyat} to balance of {mülk::%loop-player%::kira}
+				remove {mülk::%loop-player%::kirafiyat} from balance of loop-player
+				send "{@p} &6%{mülk::%loop-player%::kira}% &7isimli oyuncuya &aTL%{mülk::%loop-player%::kirafiyat}% &7kira ödedin." to loop-player
+on sign change:
+	set {_loc} to block at location 1 meter behind event-block
+	if "%region at {_loc}%" contains {@araziler}:
+		if player is op:
+			if members of region at {_loc} isn't set:
+				set {_region} to "%region at {_loc}%"
+				set {_region} to first element of ({_region} split at "in")
+				send "{@p} &a%{_region}% &7isimli arazinin fiyatı &2TL%line 4% &7olarak ayarlandı."
+				set line 1 to "{@p}"
+				set line 2 to "&2[SATILIK]"
+				set line 3 to "&c%{_region}%"
+				set line 4 to "&6TL%line 4%"
+on rightclick on a sign:
+	if line 1 of clicked block is "{@p}":
+		if line 2 of clicked block is "&a[SATILIK]":
+			set {_fiyat} to subtext of line 4 of clicked block from character (length of "TL" + 3) to length of line 4 of clicked block parsed as number
+			if balance of player is greater than or equal to {_fiyat}:
+				set line 2 of clicked block to "&4[SATILMIŞ]"
+				set line 4 of clicked block to "%player%"
+				execute console command "rg addmember %uncolored line 3% %player% -w %world of player%"
+				send "{@p} &a%uncolored line 3% &7isimli araziyi &2TL%{_fiyat}% &7ödeyerek satın aldın."
+				remove {_fiyat} from balance of player
+			else:
+				send "&7(&c!&7) &cİşlemi gerçekleştirmek için yeterli bakiyen yok!"
+	else:
+		if line 2 of clicked block is "&a[KİRALIYOR]":
+			set {_loc} to block at location 1 meter behind clicked block
+			if {mülk::%player%::kira} is set:
+				send "&7(&c!&7) &cZaten &6%{mülk::%player%::kira}% &cisimli oyuncunun arazisinde kiracısın!"
+				stop
+			if "%members of region at {_loc}%" doesn't contain "%player%":
+				set {_fiyat} to subtext of line 4 of clicked block from character (length of "TL" + 3) to length of line 4 of clicked block parsed as number
+				if balance of player is greater than or equal to {_fiyat}:
+					execute console command "rg addmember %uncolored line 3% %player% -w %world of player%"
+					send "{@p} &a%uncolored line 3% &7isimli araziyi &2TL%{_fiyat}% &7ödeyerek kiraladın.%nl%&8» &7Kiralama işlemini bırakmak için tekrar tabelaya sağ tıkla ya da &a/mülk ayrıl &7komutunu gir."
+					remove {_fiyat} from balance of player
+					set {_sahip} to "%first element of members of region at {_loc}%" parsed as offline player
+					send "{@p} &a%player% &7isimli kişi &b%uncolored line 3% &7isimli arazinizi &2TL%{_fiyat}% &7ödeyerek kiraladı." to {_sahip}
+					add {_fiyat} to balance of {_sahip}
+					set {mülk::%player%::kira} to {_sahip}
+					set {mülk::%player%::kirafiyat} to {_fiyat}
+					set {mülk::%player%::dakika} to 0
+				else:
+					send "&7(&c!&7) &cİşlemi gerçekleştirmek için yeterli bakiyen yok!"
+			else:
+				send "{@p} &cAraziyi kiralamayı bıraktın."
+				execute console command "rg removemember %uncolored line 3% %player% -w %world of player%"
+				delete {mülk::%player%::*} 
+		else if line 2 of clicked block is "&3[SATIYOR]":
+			set {_loc} to block at location 1 meter behind clicked block
+			if "%members of region at {_loc}%" doesn't contain "%player%":
+				set {_fiyat} to subtext of line 4 of clicked block from character (length of "TL" + 3) to length of line 4 of clicked block parsed as number
+				if balance of player is greater than or equal to {_fiyat}:
+					loop members of region at {_loc}:
+						execute console command "rg removemember %uncolored line 3% %loop-value% -w %world of player%"
+					execute console command "rg addmember %uncolored line 3% %player% -w %world of player%"
+					remove {_fiyat} from balance of player
+					set {_sahip} to "%first element of members of region at {_loc}%" parsed as offline player
+					send "{@p} &a%uncolored line 3% &7isimli araziyi &2TL%{_fiyat}% &7ödeyerek &3%{_sahip}% &7isimli kişiden satın aldın."
+					send "{@p} &a%player% &7isimli kişi &b%uncolored line 3% &7isimli arazinizi &2TL%{_fiyat}% &7ödeyerek satın aldı." to {_sahip}
+					set line 1 of clicked block to "{@p}"
+					set line 4 of clicked block to "%player%"
+					set line 2 of clicked block to "&4[SATILMIŞ]"
+					add {_fiyat} to balance of {_sahip}
+				else:
+					send "&7(&c!&7) &cİşlemi gerçekleştirmek için yeterli bakiyen yok!"
+			else:
+				send "{@p} &cZaten bu araziye erişim hakkına sahipsin."
+command /mülk [<text>] [<text>]:
+	trigger:
+		if arg-1 isn't set:
+			send "{@p} &e/mülk sat <fiyat> &7<|> &eArazinizi satılığa çıkartır."
+			send "{@p} &e/mülk kirala <fiyat> &7<|> &eArazinizi kiralığa çıkartır."
+			send "{@p} &e/mülk satma &7<|> &eArazinizi satılıktan çıkartır."
+			send "{@p} &e/mülk kiralama &7<|> &eArazinizi kiralıktan çıkartır."
+			send "{@p} &e/mülk ayrıl &7<|> &eKiralamakta olduğunuz araziyi kiralamayı bırakır."
+			send "{@p} &e/mülk kiracıat <oyuncu> &7<|> &eArazinizden kiracı çıkartır."
+			send "{@p} &e/mülk ekle <oyuncu> &7<|> &eArazinize bir oyuncu ekler."
+			send "{@p} &e/mülk çıkar <oyuncu> &7<|> &eArazinizden bir oyuncu çıkartır."
+			send "{@p} &e/mülk devret <oyuncu> &7<|> &eArazinizi başka bir oyuncuya devreder."
+		else if arg-1 is "sat":
+			if arg-2 parsed as number is set:
+				if target block is sign:
+					set {_loc} to block at location 1 meter behind target block
+					if "%first element of members of region at {_loc}%" is player:
+						set line 1 of target block to "%player%"
+						set line 2 of target block to "&9[SATIYOR]"
+						set line 4 of target block to "&6TL%arg-2%"
+						send "{@p} &a%uncolored line 3 of target block% &7isimli arazinizi &2TL%arg-2% &7fiyatına satışa çıkarttınız."
+					else:
+						send "{@p} &cSatmaya çalıştığınız arazi size ait değil."
+				else:
+					send "{@p} &cArazinizi belirten tabelaya bakmalısınız!"
+			else:
+				send "{@p} &cGirdiğiniz değer bir sayı değil!"
+		else if arg-1 is "kirala":
+			if arg-2 parsed as number is set:
+				if target block is sign:
+					set {_loc} to block at location 1 meter behind target block
+					if "%first element of members of region at {_loc}%" is player:
+						set line 1 of target block to "%player%"
+						set line 2 of target block to "&a[KİRALIYOR]"
+						set line 4 of target block to "&6TL%arg-2%"
+						send "{@p} &a%uncolored line 3 of target block% &7isimli arazinizi &2TL%arg-2% &7fiyatına kiralığa koydunuz."
+					else:
+						send "{@p} &cKiralamaya çalıştığınız arazi size ait değil."
+				else:
+					send "{@p} &cArazinizi belirten tabelaya bakmalısınız!"
+			else:
+				send "{@p} &cGirdiğiniz değer bir sayı değil!"
+		else if arg-1 is "ayrıl":
+			if "%members of region at player%" contains "%player%"
+				set {_region} to "%region at player%"
+				set {_region} to first element of ({_region} split at "in")
+				send "{@p} &cAraziyi kiralamayı bıraktın."
+				execute console command "rg removemember %{_region}% %player% -w %world of player%"
+				delete {mülk::%player%::*} 
+			else:
+				send "{@p} &cÜstünde durduğun araziyi kiralamıyorsun."
+		else if arg-1 is "satma":
+			if target block is sign:
+				set {_loc} to block at location 1 meter behind target block
+				if line 2 of target block is "&9[SATIYOR]":
+					if "%first element of members of region at {_loc}%" is player:
+						set line 1 of target block to "{@p}"
+						set line 2 of target block to "&4[SATILMIŞ]"
+						set line 4 of target block to "%player%"
+					else:
+						send "{@p} &cSatılıktan çıkarmaya çalıştığınız arazi size ait değil."
+				else:
+					send "{@p} &7Bu arazi zaten satışta değil."
+			else:
+				send "{@p} &cArazinizi belirten tabelaya bakmalısınız!"
+		else if arg-1 is "kiralama":
+			if target block is sign:
+				set {_loc} to block at location 1 meter behind target block
+				if line 2 of target block is "&a[KİRALIYOR]":
+					if "%first element of members of region at {_loc}%" is player:
+						set line 1 of target block to "{@p}"
+						set line 2 of target block to "&4[SATILMIŞ]"
+						set line 4 of target block to "%player%"
+					else:
+						send "{@p} &cKiralıktan çıkarmaya çalıştığınız arazi size ait değil."
+				else:
+					send "{@p} &7Bu arazi zaten kiralıkta değil."
+			else:
+				send "{@p} &cArazinizi belirten tabelaya bakmalısınız!"
+		else if arg-1 is "kiralama":
+			if target block is sign:
+				set {_loc} to block at location 1 meter behind target block
+				if line 2 of target block is "&a[KİRALIYOR]":
+					if "%first element of members of region at {_loc}%" is player:
+						set line 1 of target block to "{@p}"
+						set line 2 of target block to "&4[SATILMIŞ]"
+						set line 4 of target block to "%player%"
+					else:
+						send "{@p} &cKiralıktan çıkarmaya çalıştığınız arazi size ait değil."
+				else:
+					send "{@p} &7Bu arazi zaten kiralıkta değil."
+			else:
+				send "{@p} &cArazinizi belirten tabelaya bakmalısınız!"
+		else if arg-1 is "kiracıat":
+			if arg-2 parsed as offline player is set:
+				if {mülk::%arg-2%::kira} is player:
+					if "%first element of members of region at player%" is player:
+						set {_region} to "%region at player%"
+						set {_region} to first element of ({_region} split at "in")
+						execute console command "rg removemember %{_region}% %arg-2% -w %world of player%"
+						delete {mülk::%arg-2%:*}
+						send "{@p} &a%{_region}% &7isimli arazinizden &6%arg-2% &7isimli kiracıyı çıkarttınız."
+						send "{@p} &6%player% &7sizi &6%{_region}% &7isimli arazisinden çıkarttı." to arg-2 parsed as player
+					else:
+						send "{@p} &cKiracı çıkarmaya çalıştığınız arazi size ait değil."
+				else:
+					send "{@p} &7Bu oyuncu zaten kiracınız değil."
+			else:
+				send "{@p} &cAtmak istediğiniz kişinin adını yazınız!"
+		else if arg-1 is "ekle":
+			if arg-2 parsed as offline player is set:
+				if "%first element of members of region at player%" is player:
+					if "%members of region at player%" doesn't contain arg-2:
+						set {_region} to "%region at player%"
+						set {_region} to first element of ({_region} split at "in")
+						execute console command "rg addmember %{_region}% %arg-2% -w %world of player%"
+						send "{@p} &a%{_region}% &7isimli arazinize &6%arg-2% &7isimli oyuncuyu yetkilendirdiniz."
+						send "{@p} &6%player% &7sizi &6%{_region}% &7isimli arazisinde yetkilendirdi." to arg-2 parsed as player
+					else:
+						send "{@p} &7Oyuncu zaten arazinizde."
+				else:
+					send "{@p} &cOyuncu eklemeye çalıştığınız arazi size ait değil."
+			else:
+				send "{@p} &cEklemek istediğiniz kişinin adını yazınız!"
+		else if arg-1 is "çıkar":
+			if arg-2 parsed as offline player is set:
+				if "%first element of members of region at player%" is player:
+					if "%members of region at player%" contain arg-2:
+						set {_region} to "%region at player%"
+						set {_region} to first element of ({_region} split at "in")
+						execute console command "rg removemember %{_region}% %arg-2% -w %world of player%"
+						send "{@p} &a%{_region}% &7isimli arazinizden &6%arg-2% &7isimli oyuncuyu çıkarttınız."
+						send "{@p} &6%player% &7sizi &6%{_region}% &7isimli arazisinden çıkarttı." to arg-2 parsed as player
+					else:
+						send "{@p} &7Oyuncu zaten arazinizde değil."
+				else:
+					send "{@p} &cOyuncu eklemeye çalıştığınız arazi size ait değil."
+			else:
+				send "{@p} &cÇıkarmak istediğiniz kişinin adını yazınız!"
+		else if arg-1 is "devret":
+			if arg-2 parsed as offline player is set:
+				if "%first element of members of region at player%" is player:
+					set {_region} to "%region at player%"
+					set {_region} to first element of ({_region} split at "in")
+					loop members of region at player:
+						execute console command "rg removemember %{_region}% %loop-value% -w %world of player%"
+					execute console command "rg addmember %{_region}% %arg-2% -w %world of player%"
+					send "{@p} &a%{_region}% &7isimli araziniz &6%arg-2% &7isimli oyuncuya devredildi."
+					send "{@p} &6%player% &7size &6%{_region}% &7isimli arazisini devretti." to arg-2 parsed as player
+				else:
+					send "{@p} &cDevretmek istediğiniz arazi size ait değil."
+			else:
+				send "{@p} &cDevretmek istediğiniz kişinin adını yazınız!"
