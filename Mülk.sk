@@ -157,20 +157,6 @@ command /mülk [<text>] [<text>]:
 					send "{@p} &7Bu arazi zaten kiralıkta değil."
 			else:
 				send "{@p} &cArazinizi belirten tabelaya bakmalısınız!"
-		else if arg-1 is "kiralama":
-			if target block is sign:
-				set {_loc} to block at location 1 meter behind target block
-				if line 2 of target block is "&a[KİRALIYOR]":
-					if "%first element of members of region at {_loc}%" is player:
-						set line 1 of target block to "{@p}"
-						set line 2 of target block to "&4[SATILMIŞ]"
-						set line 4 of target block to "%player%"
-					else:
-						send "{@p} &cKiralıktan çıkarmaya çalıştığınız arazi size ait değil."
-				else:
-					send "{@p} &7Bu arazi zaten kiralıkta değil."
-			else:
-				send "{@p} &cArazinizi belirten tabelaya bakmalısınız!"
 		else if arg-1 is "kiracıat":
 			if arg-2 parsed as offline player is set:
 				if {mülk::%arg-2%::kira} is player:
