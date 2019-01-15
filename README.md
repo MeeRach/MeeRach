@@ -1,2 +1,0 @@
-# MeeRach
-Mülk.sk
